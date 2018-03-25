@@ -1,0 +1,86 @@
+situation: 
+
+collibra is a metadata management tool which allows you to create an asset model
+linking business assets to technical and governance assets.  collibra then allows
+you to create data stewardship and governance workflows within the tool and provides
+data quality report cards and dashboards.  
+
+task: 
+
+DQ rules and quality checks are run 
+on ab initio metadata hub informatica DQ, the results of these external systems need
+to be ingested into collibra and linked to the appropriate assets already existing in 
+collibra. 
+
+action: 
+
+wrote python script that parses csv files and completes import template for collibra.  script is invoked as a cronjob on a dedicated ETL host.  script parses csv files using pandas, does some wrangling, and completes an import template with data for collibra, creates REST POST request
+(using urllib2 library request, urlopen, urlerror methods) and hits collibra ingest REST API endpoint with csv reference.  worked with client's internal engineering team to decide on format of output files from metadata hub and informatica.  they would produce csv files with a UUID of the associated asset in the file and this would be placed in a network file directory.  python script parses through csv files using pandas library and builds import template.  saves import template and builds REST API POST request and tries to post the csv file.  if successful move the import template csv to a different folder and change the file name to the date of ingestion.  if failure leave file in staging directory and send email to administrator alerting failed job.
+
+result: 
+
+The script was successful in adding external data profiling and quality metadata into collibra on an ad hoc basis instead of using mulesoft service bus.  this was just a quick poc to show that collibra can handle automated ingestion from external system.  next step is to harden the process and use a service bus with logging.  
+
+------------------------------------------------------------------------------------------------
+
+situation: 
+
+we have a custom data lake management tool that keeps track of all transformations between data sets and displays it as a visual graph.  each downstream transformation from raw to published is saved a vertex in a graph database, with edges tagged with properties of the transformation linking the vertices together.  client had their own custom ETL jobs that they didn't want to put into our data lake management tool but they did want to use our visualization to track lineage.  
+
+task: 
+
+we decided to build a rest API exposing our Neo4J graph DB so that the client's ETL job can create lineage diagrams.  the API has to be lightweight and flexible to support all future ETL lineage tracking.  
+
+action: 
+
+created a REST API using Flask and jsonify libraries.  one endpoint, /lineage, with two methods for POST and PUT.  POST for brand new data sets and tranforms, and PUT for a transform on an existing data set.  the request body contains JSON with all the metadata of the source and target data sets and the transform information.  my function parses the JSON and creates appropriate verticies in NEO4J for the data sets and adds the appropriate properties for them, and also creates edges with properties connecting the source and target data sets.  if using PUT method you have to pass in UID of existing vertex reprsenting a data set, new target data set and, transformation information.  tested using Postman.  documented it so client team can take over.
+
+result:
+
+client was happy that we could allow them to create lineage diagrams from their own external ETL jobs.  they were far less worried about buying into our data lake management tool and decided to move to the next phase of the POC.
+
+---------------------------------------------------------------------------------------------------
+
+situation:
+
+a financial services client had a reporting system running off of terradata which contained 72 hours of deduped transaction records.  they are moving to the cloud and wanted to do a POC to see how they could use Redshift instead of Terradata for their OLAP platform.  every 72 hours the latest deduped transactions needed to be loaded into Redshift and the past data archived into S3 bucket.  
+
+task: 
+
+go through redshift table and unload all data and dump into an archive bucket in S3.  go through S3 staging bucket which contains the dump of the last 72 hours and load it into Redshift.
+
+action:  
+
+used a python script using boto3 and psycopg2 libraries.  two scripts, one to off load existing redshift data, and one to load new 72 hour transaction data.  invoked by autosys scheduler.  a shell script wraps the python script which made it a two word command.  all the properties for the unload and load jobs are stored in the appropriate python script files.  the shell script accepts one parameter either 'load' or 'unload' and uses it to determine which paramaters and methods to use.  need to store scheme, dbname, port, user, password, file_path
+
+result:
+
+client was happy with POC and is currently working on moving more terradata work onto redshift.  
+
+
+
+learn a new skill:
+collibra data gov tool
+s - new data gov metadata management tool 
+t - need to learn it so i can work on client projects
+a - learned the api through documentation and testing around
+r - was able to master collibra and helped explain concepts to clients
+
+explain technical concept to non technical 
+s - collibra requires an asset model to be created, very much like class in OOP
+t - need to explain what an asset model is and how/why we want to model things certain way
+a - the examples collibra provided were too specific and made it confusing.  created my own asset model in dev environment, very simple using a mock e-commerce company.  built it out in collibra and showed them what it looks like in the tool with data actually loaded using example asset model.  also provided high level diagrams to explain logical construction of asset model to actual changes in the tool
+r - client got a much better idea of the asset model in collibra and was able to help guide us better with what/how they wanted to see metadata within the tool
+
+project from start to finish, obstacles you had to overcome:
+s - poc to create contract repository and machine learning classification.  not enough training data but client just wants a poc and doesn't care about accuracy or recall.
+t - had to work with NLP SME who did the analytics on text.  i had to work on getting the text from the scanned image.  this required building a OCR parser using pytesseract that built a corpus of text from the scanned images.  
+a - built a data pipeline using bash scripts which call python scripts.  python script looks for files in s3 bucket, these the landing zone for the scanned contracts.  then downloads them locally and processes them using pytesseract, extracts text from them and saves them individually into a local directory.  NLP SME has java program that can be run on each document in corpus to classify the contract and pull out named entities.  another python script calls the java program on each document and produces JSON with all the metadata that needs to be posted to solr.  finally last script goes through all the JSONs in the directory and posts them to SOLR using rest api.  
+r - we were able to demo the POC live and have it working.  even though we didn't have results better than 50% at classifying it was a great exercise in integrating all the open source tools together and we used the same pattern for other POCs.  
+
+what is rest? 
+
+
+[2:59 PM, 3/22/2018] Sri Harsha Chavali: sriharsha.chavali@outlook.com
+[2:59 PM, 3/22/2018] Sri Harsha Chavali: Ahsrah123!
+udemy login
